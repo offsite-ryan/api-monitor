@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+
+        // default parameters - override in the url query parameters
+        var url = 'http://localhost:3003/Test/E100/true?token=123';
+        var interval = 1;
+        var keepHistory = false;
+        // ---
+
+        function output(inp) {
+            inp = '<b>' + new Date().toLocaleString() + '</b><br/>' + inp;
+            if (keepHistory == true) {
+                var d = document.getElementById("output");
+                d.innerHTML = '<hr/>' + inp + '<br/>' + d.innerHTML;
+            } else {
+                var d = document.getElementById("output");
+                d.innerHTML = '<hr/>' + inp;
+            }
+        }
+
+        function syntaxHighlight(json) {
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                var cls = 'number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'key';
+                    } else {
+                        // console.log(match);
+                        if (isNaN(+(match.replace('\"', '').replace('\"', ''))) == false) {
+                            match = match.replace('\"', '').replace('\"', '');
+                        } else {
+                            cls = 'string';
+                        }
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+        const get = () => {
+            if (interval > 0) {
+                try {
+                    $.get(url, function (data, status) {
+                        output(syntaxHighlight(JSON.stringify(data, null, 2)));
+                        setTimeout(() => get(), interval * 1000);
+                    })
+                        .done(() => {
+                            // console.log('done');
+                        })
+                        .fail(() => {
+                            output('ERROR');
+                            setTimeout(() => get(), interval * 1000);
+                        });
+                } catch (e) {
+                    output(JSON.stringify(e));
+                    setTimeout(() => get(), interval * 1000);
+                }
+            } else {
+                setTimeout(() => get(), 1000);
+            }
+        }
+        $(document).ready(function () {
+            const params = new URLSearchParams(window.location.search)
+            interval = +(params.get('interval')) || 1;
+
+            console.log('interval:', interval);
+            console.log('url:', url);
+            console.log('history:', keepHistory);
+            document.getElementById('url').setAttribute('value', url);
+            setTimeout(() => get(), 1);
+        });
+
+
+    </script>
+    <style>
+        pre {
+            outline: 0px solid #ccc;
+            padding: 5px;
+            margin: 5px;
+        }
+
+        .string {
+            color: blue;
+            /* font-weight: 700; */
+        }
+
+        .number {
+            color: darkorange;
+        }
+
+        .boolean {
+            color: black;
+        }
+
+        .null {
+            color: magenta;
+        }
+
+        .key {
+            color: green;
+        }
+        input {
+            /* border:0px solid red; */
+        }
+    </style>
+</head>
+
+<body style="font-family: Verdana, Geneva, Tahoma, sans-serif;">
+    <div style="margin:10px;">
+        <b style="margin-right: 40px;">URL: </b><input id="url" type="text" style="width: 85%;"
+            onchange="url=this.value" />
+        <br />
+        <b style="margin-right: 12px;">Update: </b><input id="interval" type="number" style="width: 40px;"
+            onchange="interval=+(this.value)" min="0" value="1" />
+        <br />
+        <b style="margin-right: 8px;">History: </b><input id="history" type="checkbox" style2="width: 10%;"
+            onchange="keepHistory=!keepHistory" />
+    </div>
+    <pre id="output" class="pre" style="width:100%;height:100%;">
+    </pre>
+
+</body>
+
+</html>
